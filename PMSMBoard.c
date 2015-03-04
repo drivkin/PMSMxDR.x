@@ -4,7 +4,7 @@
 #include "pps.h"
 #include "DRV8301.h"
 #include "PMSMBoard.h"
-#include "estimator.h"
+
 
 #if defined (CHARACTERIZE_POSITION) || defined (CHARACTERIZE_VELOCITY)
 #include "PMSM_Characterize.h"
@@ -19,7 +19,8 @@
 #endif
 
 #ifdef TORQUE
-#include "estimator.h"
+#include "EstimatorFixedPoint.h"
+#include "SVM_Torque_Control.h"
 #endif
 
 
@@ -88,13 +89,15 @@ void InitBoard(ADCBuffer *ADBuff, CircularBuffer *cB, CircularBuffer *spi_cB, vo
         DMA6_ADC_Enable(ADBuff);
         ADCInit();
         DRV8301_Init(&motorDriverInfo);
-#ifdef TORQUE
         initEstimators();
+        initSVM();
+#ifdef TORQUE
+
 #endif
         CNInit();
 
 #ifndef SINE
-        
+
 #endif
 #ifdef QEI
         QEIInit();
@@ -190,41 +193,20 @@ void UART2Init(void) {
 
 void MotorInit() {
 #ifdef SINE
-   //set periods
-    PHASE1 = 1000;
-    PHASE2 = 1000;
-    PHASE3 = 1000;
-    /* Set Duty Cycles */
-    PDC1 = PDC2 = PDC3 = 0;
-    //PDC1 = 500;
-    /* Set Dead Time Values */
-    DTR1 = DTR2 = DTR3 = 0; // these are ignored in this mode
-    ALTDTR1 = ALTDTR2 = ALTDTR3= 25;
-   // ALTDTR3 = 2000;
-
-    /* Set PWM Mode to Complementary */
-    IOCON1 = IOCON2 = IOCON3 = 0xC000;
-
-/* Set Independent Time Bases, Center-Aligned mode and
- Independent Duty Cycles */
-PWMCON1 = PWMCON2 = PWMCON3 = 0x0204;
-
-    /* Configure Faults */
-    FCLCON1 = FCLCON2 = FCLCON3 = 0x0003;
-
-    /* 1:8 Prescaler */
-    PTCON2 = 0x0000;
-
-
-//    //ADC trigger stuff.
-//    TRGCON1bits.TRGDIV = 0;
-//    TRGCON1bits.TRGSTRT = 0b111111;
-//    TRIG1 = PHASE1 - 1;
-
-
-    /* Enable PWM Module */
-    PTCON = 0x8000;
+    initSVMCom();
 #else
+    InitBlockCom();
+
+#endif
+    EN_GATE = 1;
+    DC_CAL = 0;
+
+    initInfo.MotorInited = 1;
+}
+
+void InitBlockCom(void) {
+
+    PTCON = 0x0000;
     /* Set PWM Period on Primary Time Base */
     PTPER = 400;
     /* Set Phase Shift */
@@ -243,7 +225,7 @@ PWMCON1 = PWMCON2 = PWMCON3 = 0x0204;
     SDC3 = 0;
     /* Set Dead Time Values */
     DTR1 = DTR2 = DTR3 = 20;
-    ALTDTR1 = ALTDTR2 = ALTDTR3 = 20;
+    ALTDTR1 = ALTDTR2 = ALTDTR3 = 10;
     /* Set PWM Mode to Independent */
     IOCON1 = IOCON2 = IOCON3 = 0xCC00;
     //Set unused PWM outputs as GPIO driven
@@ -256,12 +238,43 @@ PWMCON1 = PWMCON2 = PWMCON3 = 0x0204;
     PTCON2 = 0x0006;
     /* Enable PWM Module */
     PTCON = 0x8000;
+}
 
-#endif
-    EN_GATE = 1;
-    DC_CAL = 0;
+void initSVMCom(void) {
+    //set periods
+    PHASE1 = 1000;
+    PHASE2 = 1000;
+    PHASE3 = 1000;
+    /* Set Duty Cycles */
+    PDC1 = PDC2 = PDC3 = 0;
+    //PDC1 = 500;
+    /* Set Dead Time Values */
+    DTR1 = DTR2 = DTR3 = 0; // these are ignored in this mode
+    ALTDTR1 = ALTDTR2 = ALTDTR3 = 10;
+    // ALTDTR3 = 2000;
 
-    initInfo.MotorInited = 1;
+    /* Set PWM Mode to Complementary */
+    IOCON1 = IOCON2 = IOCON3 = 0xC000;
+
+    /* Set Independent Time Bases, Center-Aligned mode and
+     Independent Duty Cycles */
+    PWMCON1 = PWMCON2 = PWMCON3 = 0x0204;
+
+    /* Configure Faults */
+    FCLCON1 = FCLCON2 = FCLCON3 = 0x0003;
+
+    /* 1:8 Prescaler */
+    PTCON2 = 0x0000;
+
+
+    //    //ADC trigger stuff.
+    //    TRGCON1bits.TRGDIV = 0;
+    //    TRGCON1bits.TRGSTRT = 0b111111;
+    //    TRIG1 = PHASE1 - 1;
+
+
+    /* Enable PWM Module */
+    PTCON = 0x8000;
 }
 
 void ClockInit(void) {
@@ -403,6 +416,7 @@ void CNInit(void) {
     CNENDbits.CNIED0 = 1;
 
     IEC1bits.CNIE = 1; // Enable CN interrupts
+    IPC4bits.CNIP = 0x01;
     IFS1bits.CNIF = 0; // Reset CN interrupt
 }
 
@@ -611,7 +625,7 @@ void PrintWithTimestamp(float *toSend, uint16_t size) {
             buff1[sb1 + size] = (float) TMR6; //TIMESTAMP
             sb1 = sb1 + size + 1;
         } else {
-           // LED3 = 1;
+            // LED3 = 1;
             DMA0_UART2_Transfer((sb1)*4, (uint8_t*) buff1);
             sb1 = 0;
             currbuff = 2;

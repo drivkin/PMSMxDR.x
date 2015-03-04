@@ -1,16 +1,12 @@
 /* 
- * File:   estimator.h
+ * File:   EstimatorFixedPoint.h
  * Author: Dmitriy
  *
- * Contains position estimator and current estimator. Make sure you initialize
- * the various modules used for estimation (such as encoder, ADC, etc. before
- * initializing the estimators).
- *
- * Created on February 3, 2015, 12:10 PM
+ * Created on February 18, 2015, 5:13 PM
  */
 
-#ifndef ESTIMATOR_H
-#define	ESTIMATOR_H
+#ifndef ESTIMATORFIXEDPOINT_H
+#define	ESTIMATORFIXEDPOINT_H
 
 #define HALL_ESTIMATOR
 
@@ -64,5 +60,5 @@ void setDriveStatus(int status);
 
 
 
-#endif	/* ESTIMATOR_H */
+#endif	/* ESTIMATORFIXEDPOINT_H */
 

@@ -3,4 +3,5 @@ PMSM_Velocity.c  \
 PMSM_Velocity.h  \
  PMSMBoard.h  \
 CircularBuffer.h  \
-DMA_Transfer.h 
+DMA_Transfer.h  \
+estimator.h 

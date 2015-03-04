@@ -107,6 +107,8 @@ void ADCInit(void);
 void MagEncoderInit(void);
 void SamplerInit(void);
 void PrintWithTimestamp (float *toSend, uint16_t size);
+void initSVMCom(void);
+void InitBlockCom(void);
 
 uint16_t getCaptureReading(void);
 uint32_t getEncDC(void);

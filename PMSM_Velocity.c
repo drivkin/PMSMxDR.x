@@ -52,6 +52,7 @@
 #include <dsp.h>
 #include <math.h>
 #include <qei32.h>
+#include "estimator.h"
 
 #if defined VELOCITY
 
@@ -83,7 +84,7 @@ typedef struct {
 } TimesOut;
 
 static float speed;
-static float u = .5 ;
+static float u = .1 ;
 static float d_u = 0;
 static float y = 0;
 
@@ -476,6 +477,7 @@ void TrapUpdate(uint16_t torque, uint16_t direction)
 
 void __attribute__((__interrupt__, no_auto_psv)) _CNInterrupt(void)
 {
+        hallUpdate();
 	if (u < 0) {
 		TrapUpdate((uint16_t) (-1 * u * PTPER), CCW);
 	} else if (u >= 0) {

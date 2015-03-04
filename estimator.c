@@ -5,6 +5,8 @@
 #include "PMSMBoard.h"
 
 
+
+
 #define T_EST 274 //  256 prescaler
 #define T_EST_S .001
 #define ROT_THRESH .005
@@ -35,6 +37,8 @@ int pHC = 0;
 
 int direction = 0;
 
+int driveStatus = 0;
+
 float rotorAngleElectrical = 0;
 float rotorAngleMechanical = 0;
 float rotorSpeed = 0;
@@ -57,7 +61,16 @@ float MAVfiltV(float dat);
 float computeRotorAngleMechanical(void);
 float computeRotorSpeed(void);
 float computeRotorAcceleration(void);
+void TrapUpdate(uint16_t torque, uint16_t direction);
 ABCurrents computeABCurrents(void);
+
+int getDriveStatus(void) {
+    return driveStatus;
+}
+
+void setDriveStatus(int status) {
+    driveStatus = status;
+}
 
 float getRotorAngleMechanical(void) {
     return rotorAngleMechanical;
@@ -75,7 +88,7 @@ float getRotorAcceleration(void) {
     return rotorAcceleration;
 }
 
-int isTracking(){
+int isTracking() {
     return tracking;
 }
 
@@ -83,7 +96,6 @@ void initEstimators(void) {
     //for testing
     //    float hi = 0.00001460224 * 1287;
     //    float hello = T_CLK * 1287;
-
     //estimators use timer nine
     T9CONbits.TON = 0;
     T9CONbits.TCS = 0;
@@ -150,25 +162,32 @@ int printPre = 0;
 void __attribute__((__interrupt__, no_auto_psv)) _T9Interrupt(void) {
     IFS3bits.T9IF = 0; //Clear Timer3 interrupt flag
     computeRotorParameters();
+    if (isTracking()) {
+        if (driveStatus == BLOCK) {
+            initSVMCom();
+            driveStatus = SVM;
+        }
+        updateTorqueController(0.3);
+    }
     //    rotorAngleMechanical = computeRotorAngleMechanical();
     //    rotorSpeed = computeRotorSpeed();
     //    rotorAcceleration = computeRotorAcceleration();
     //   iAB = computeABCurrents();
     //#ifdef ESTIMATOR_TEST
-    if (printPre < 3) {
-        printPre++;
-    } else {
-        static float out[3];
-        out[0] = getRotorAngleElectrical();
-        out[1] = (float)direction;
-        out[2] = (float)tracking;
-        PrintWithTimestamp(out, 3);
-        printPre = 0;
-    }
+    //    if (printPre < 1) {
+    //        printPre++;
+    //    } else {
+    //        static float out[3];
+    //        out[0] = getRotorAngleElectrical();
+    //        out[1] = (float)direction;
+    //        out[2] = (float)tracking;
+    //        PrintWithTimestamp(out, 3);
+    //        printPre = 0;
+    //    }
 
     // #endif
 }
-#define FILT_SIZEP 8
+#define FILT_SIZEP 20 //actually 1/filtsize
 
 float MAVfiltP(float dat) {
 
@@ -249,6 +268,7 @@ float MAVfiltA(float dat) {
 void hallUpdate() {
     static int first = 1;
     guard = 1;
+    float residual;
 
     // for determining if the estimator is tracking
     static float bigThreshPos = 0;
@@ -390,6 +410,7 @@ void hallUpdate() {
             }
         }
         predictedDeltaTheta = 0;
+        residual = predictedDeltaTheta;
         rotorAcceleration = (rotorSpeed - prevV) / filteredTime;
 
         //        rotorSpeed = realTime;
@@ -400,6 +421,13 @@ void hallUpdate() {
     pHA = HALL1;
     pHB = HALL2;
     pHC = HALL3;
+
+    static float out[3];
+    out[0] = residual ;
+    out[1] = (float) direction;
+    out[2] = (float) tracking;
+    PrintWithTimestamp(out, 3);
+
     guard = 0;
 }
 
@@ -407,7 +435,13 @@ void hallUpdate() {
 
 void __attribute__((__interrupt__, no_auto_psv)) _CNInterrupt(void) {
     hallUpdate();
-
+    if (!isTracking()) {
+        if (driveStatus == SVM) {
+            InitBlockCom();
+            driveStatus = BLOCK;
+        }
+        TrapUpdate(100, direction);
+    }
     IFS1bits.CNIF = 0; // Clear CN interrupt
 }
 #endif
@@ -419,16 +453,149 @@ void computeRotorParameters(void) {
         rotorSpeed = rotorSpeed + T_EST_S*rotorAcceleration;
         predictedDeltaTheta = predictedDeltaTheta + T_EST_S*rotorSpeed;
         rotorAngleElectrical = rotorAngleElectrical + T_EST_S*rotorSpeed;
-        if(rotorAngleElectrical > 6.28318530718){
+        if (rotorAngleElectrical > 6.28318530718) {
             rotorAngleElectrical = rotorAngleElectrical - 6.28318530718;
-        }else{
-            if(rotorAngleElectrical<0){
+        } else {
+            if (rotorAngleElectrical < 0) {
                 rotorAngleElectrical = rotorAngleElectrical + 6.28318530718;
             }
         }
     }
 }
 #endif
+
+void TrapUpdate(uint16_t torque, uint16_t direction) {
+    if (torque > PTPER) {
+        torque = PTPER;
+    }
+
+    if (direction == CW) {
+        if ((HALL1 && HALL2 && !HALL3)) {
+            GH_A_DC = 0;
+            GL_A_DC = 0;
+            GH_B_DC = torque;
+            GL_B_DC = 0;
+            GH_C_DC = 0;
+            GL_C_DC = torque;
+            LED1 = 1;
+            LED2 = 1;
+            LED3 = 0;
+        } else if ((!HALL1 && HALL2 && !HALL3)) {
+            GH_A_DC = 0;
+            GL_A_DC = torque;
+            GH_B_DC = torque;
+            GL_B_DC = 0;
+            GH_C_DC = 0;
+            GL_C_DC = 0;
+            LED1 = 0;
+            LED2 = 1;
+            LED3 = 0;
+        } else if ((!HALL1 && HALL2 && HALL3)) {
+            GH_A_DC = 0;
+            GL_A_DC = torque;
+            GH_B_DC = 0;
+            GL_B_DC = 0;
+            GH_C_DC = torque;
+            GL_C_DC = 0;
+            LED1 = 0;
+            LED2 = 1;
+            LED3 = 1;
+        } else if ((!HALL1 && !HALL2 && HALL3)) {
+            GH_A_DC = 0;
+            GL_A_DC = 0;
+            GH_B_DC = 0;
+            GL_B_DC = torque;
+            GH_C_DC = torque;
+            GL_C_DC = 0;
+            LED1 = 0;
+            LED2 = 0;
+            LED3 = 1;
+        } else if ((HALL1 && !HALL2 && HALL3)) {
+            GH_A_DC = torque;
+            GL_A_DC = 0;
+            GH_B_DC = 0;
+            GL_B_DC = torque;
+            GH_C_DC = 0;
+            GL_C_DC = 0;
+            LED1 = 1;
+            LED2 = 0;
+            LED3 = 1;
+        } else if ((HALL1 && !HALL2 && !HALL3)) {
+            GH_A_DC = torque;
+            GL_A_DC = 0;
+            GH_B_DC = 0;
+            GL_B_DC = 0;
+            GH_C_DC = 0;
+            GL_C_DC = torque;
+            LED1 = 1;
+            LED2 = 0;
+            LED3 = 0;
+        }
+    } else if (direction == CCW) {
+        if ((HALL1 && HALL2 && !HALL3)) {
+            GH_A_DC = 0;
+            GL_A_DC = 0;
+            GH_B_DC = 0;
+            GL_B_DC = torque;
+            GH_C_DC = torque;
+            GL_C_DC = 0;
+            LED1 = 1;
+            LED2 = 1;
+            LED3 = 0;
+        } else if ((!HALL1 && HALL2 && !HALL3)) {
+            GH_A_DC = torque;
+            GL_A_DC = 0;
+            GH_B_DC = 0;
+            GL_B_DC = torque;
+            GH_C_DC = 0;
+            GL_C_DC = 0;
+            LED1 = 0;
+            LED2 = 1;
+            LED3 = 0;
+        } else if ((!HALL1 && HALL2 && HALL3)) {
+            GH_A_DC = torque;
+            GL_A_DC = 0;
+            GH_B_DC = 0;
+            GL_B_DC = 0;
+            GH_C_DC = 0;
+            GL_C_DC = torque;
+            LED1 = 0;
+            LED2 = 1;
+            LED3 = 1;
+        } else if ((!HALL1 && !HALL2 && HALL3)) {
+            GH_A_DC = 0;
+            GL_A_DC = 0;
+            GH_B_DC = torque;
+            GL_B_DC = 0;
+            GH_C_DC = 0;
+            GL_C_DC = torque;
+            LED1 = 0;
+            LED2 = 0;
+            LED3 = 1;
+        } else if ((HALL1 && !HALL2 && HALL3)) {
+            GH_A_DC = 0;
+            GL_A_DC = torque;
+            GH_B_DC = torque;
+            GL_B_DC = 0;
+            GH_C_DC = 0;
+            GL_C_DC = 0;
+            LED1 = 1;
+            LED2 = 0;
+            LED3 = 1;
+        } else if ((HALL1 && !HALL2 && !HALL3)) {
+
+            GH_A_DC = 0;
+            GL_A_DC = torque;
+            GH_B_DC = 0;
+            GL_B_DC = 0;
+            GH_C_DC = torque;
+            GL_C_DC = 0;
+            LED1 = 1;
+            LED2 = 0;
+            LED3 = 0;
+        }
+    }
+}
 
 
 #ifdef ENCODER_POSITION

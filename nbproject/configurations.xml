@@ -16,8 +16,8 @@
       <itemPath>DMA_Transfer.h</itemPath>
       <itemPath>PMSM_Position.h</itemPath>
       <itemPath>PMSM_Velocity.h</itemPath>
-      <itemPath>C:/Users/Dmitriy/Documents/GitHub/PMSMxDR.X/estimator.h</itemPath>
       <itemPath>C:/Users/Dmitriy/Documents/GitHub/PMSMxDR.X/SVM_Torque_Control.h</itemPath>
+      <itemPath>C:/Users/Dmitriy/Documents/GitHub/PMSMxDR.X/EstimatorFixedPoint.h</itemPath>
     </logicalFolder>
     <logicalFolder name="LinkerScript"
                    displayName="Linker Files"
@@ -39,8 +39,8 @@
       <itemPath>traps.c</itemPath>
       <itemPath>PMSM_Velocity.c</itemPath>
       <itemPath>PMSM_Position.c</itemPath>
-      <itemPath>C:/Users/Dmitriy/Documents/GitHub/PMSMxDR.X/estimator.c</itemPath>
       <itemPath>C:/Users/Dmitriy/Documents/GitHub/PMSMxDR.X/SVM_Torque_Control.c</itemPath>
+      <itemPath>C:/Users/Dmitriy/Documents/GitHub/PMSMxDR.X/EstimatorFixedPoint.c</itemPath>
     </logicalFolder>
     <logicalFolder name="ExternalFiles"
                    displayName="Important Files"
@@ -62,7 +62,7 @@
         <targetPluginBoard></targetPluginBoard>
         <platformTool>PICkit3PlatformTool</platformTool>
         <languageToolchain>XC16</languageToolchain>
-        <languageToolchainVersion>1.21</languageToolchainVersion>
+        <languageToolchainVersion>1.24</languageToolchainVersion>
         <platform>3</platform>
       </toolsSet>
       <compileType>
@@ -190,11 +190,9 @@
         <property key="symbol-stripping" value=""/>
         <property key="trace-symbols" value=""/>
         <property key="warn-section-align" value="false"/>
+        <appendMe value="-lq"/>
       </C30-LD>
       <C30Global>
-        <property key="common-include-directories"
-                  value="../../SystemID Matlab Support"/>
-        <property key="dual-boot-partition" value="0"/>
         <property key="fast-math" value="false"/>
         <property key="generic-16-bit" value="false"/>
         <property key="legacy-libc" value="false"/>
@@ -273,16 +271,14 @@
         <property key="firmware.download.all" value="false"/>
         <property key="hwtoolclock.frcindebug" value="false"/>
         <property key="memories.aux" value="false"/>
-        <property key="memories.bootflash" value="false"/>
-        <property key="memories.configurationmemory" value="false"/>
-        <property key="memories.dataflash" value="true"/>
-        <property key="memories.eeprom" value="false"/>
+        <property key="memories.bootflash" value="true"/>
+        <property key="memories.configurationmemory" value="true"/>
+        <property key="memories.eeprom" value="true"/>
         <property key="memories.flashdata" value="true"/>
-        <property key="memories.id" value="false"/>
+        <property key="memories.id" value="true"/>
         <property key="memories.programmemory" value="true"/>
-        <property key="memories.programmemory.end" value="0xabff"/>
+        <property key="memories.programmemory.end" value="0x2abff"/>
         <property key="memories.programmemory.start" value="0x0"/>
-        <property key="memories.userotp" value="false"/>
         <property key="poweroptions.powerenable" value="false"/>
         <property key="programmertogo.imagename" value=""/>
         <property key="programoptions.donoteraseauxmem" value="false"/>
@@ -290,14 +286,13 @@
         <property key="programoptions.pgmspeed" value="2"/>
         <property key="programoptions.preserveeeprom" value="false"/>
         <property key="programoptions.preserveprogramrange" value="false"/>
-        <property key="programoptions.preserveprogramrange.end" value="0xabff"/>
+        <property key="programoptions.preserveprogramrange.end" value="0x2abff"/>
         <property key="programoptions.preserveprogramrange.start" value="0x0"/>
         <property key="programoptions.preserveuserid" value="false"/>
-        <property key="programoptions.programcalmem" value="false"/>
         <property key="programoptions.testmodeentrymethod" value="VPPFirst"/>
         <property key="programoptions.usehighvoltageonmclr" value="false"/>
         <property key="programoptions.uselvpprogramming" value="false"/>
-        <property key="voltagevalue" value="3.375"/>
+        <property key="voltagevalue" value="3.25"/>
       </PICkit3PlatformTool>
       <item path="PMSM_Velocity.h" ex="false" overriding="false">
         <C30>

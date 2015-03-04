@@ -22,6 +22,7 @@
 
 
 
+
 #if defined (CHARACTERIZE_POSITION) || defined (CHARACTERIZE_VELOCITY)
 #include "PMSM_Characterize.h"
 
@@ -71,9 +72,6 @@ uint16_t ADC_LPF(void);
 #ifdef RUN_FULL
 
 int main(void) {
-static int waitTime = 0;
-    static uint16_t size;
-    static uint8_t out[56];
 
     for (torque = 0; torque < 65533; torque++) {
         Nop();
@@ -84,12 +82,12 @@ static int waitTime = 0;
     CB_Init(&spiBuffer, (uint8_t *) spiBuf, 128);
 
     //EN_GATE = 0;
-    
-    
+
+
     //LED4 = 1;
-//    GH_A_DC = 50;
-//    GH_B_DC = 50;
-//    GH_C_DC = 50;
+    //    GH_A_DC = 50;
+    //    GH_B_DC = 50;
+    //    GH_C_DC = 50;
 #ifdef POSITION
     //SetPosition(1000);
 #endif
@@ -97,92 +95,96 @@ static int waitTime = 0;
 #ifdef VELOCITY
     // SetVelocity(500);
 #endif
-    uint32_t i = 1000001;
+
     while (1) {
-        //        if(i<5000){
-        //            i++;
-        //
-        //        }else{
-        //
-        //          // LED1^=1;
-        //            size = sprintf((char *) out, "%u\n",getEncDC()<<16);
-        //            DMA0_UART2_Transfer(size, out);
-        //            i = 0;
-        //        }
-
-        if (events & EVENT_UPDATE_SPEED) {
-#if defined (CHARACTERIZE_POSITION) || defined (CHARACTERIZE_VELOCITY)
-            CharacterizeStep();
-#else
-#ifdef VELOCITY
-            //   PMSM_Update_Velocity();
-#endif
-#ifdef POSITION
-            //PMSM_Update_Position();
-#endif
-#ifdef TORQUE
-
-         if(waitTime<10000){
-             waitTime++;
-         }else{
-         updateTorqueController(0.3);
-         }
-#endif
-
-#endif
-            events &= ~EVENT_UPDATE_SPEED;
-        }
-
-        if (events & EVENT_UART_DATA_READY) {
-            events &= ~EVENT_UART_DATA_READY;
-        }
-
-        if (events & EVENT_CAN_RX) {
-            events &= ~EVENT_CAN_RX;
-        }
-
-        if (events & EVENT_SPI_RX) {
-            static uint8_t message[32];
-            uint16_t size;
-            uint8_t out[56];
-            message[0] = 0xFF;
-            message[1] = 0xFF;
-            message[2] = 0xFF;
-            message[3] = 0xFF;
-            message[4] = 0xFF;
-            message[5] = 0xFF;
-            message[6] = 0xFF;
-            message[7] = 0xFF;
-
-            CB_ReadByte(&spiBuffer, &message[0]);
-            CB_ReadByte(&spiBuffer, &message[1]);
-            CB_ReadByte(&spiBuffer, &message[2]);
-            CB_ReadByte(&spiBuffer, &message[3]);
-            CB_ReadByte(&spiBuffer, &message[4]);
-            CB_ReadByte(&spiBuffer, &message[5]);
-            CB_ReadByte(&spiBuffer, &message[6]);
-            CB_ReadByte(&spiBuffer, &message[7]);
-
-            CB_Init(&spiBuffer, &spiBuf, 64);
-            LED1 ^= LED1;
-            size = sprintf((char *) out, "0x%X, 0x%X, 0x%X, 0x%X\r\n",
-                    ((message[0] << 8) | message[1]), ((message[2] << 8) | message[3]),
-                    ((message[4] << 8) | message[5]), ((message[6] << 8) | message[7]));
-            DMA0_UART2_Transfer(size, out);
-            events &= ~EVENT_SPI_RX;
-        }
-
-        if (events & EVENT_REPORT_FAULT) {
-            events &= ~EVENT_REPORT_FAULT;
-        }
-
-        if (events & EVENT_ADC_DATA) {
-            size = sprintf((char *) out, "%i, %i, %u\r\n", ADCBuff.Adc1Data[0], ADCBuff.Adc1Data[1], getEncDC() << 16);
-            DMA0_UART2_Transfer(size, out);
-            events &= ~EVENT_ADC_DATA;
-        }
+//        //        if(i<5000){
+//        //            i++;
+//        //
+//        //        }else{
+//        //
+//        //          // LED1^=1;
+//        //            size = sprintf((char *) out, "%u\n",getEncDC()<<16);
+//        //            DMA0_UART2_Transfer(size, out);
+//        //            i = 0;
+//        //        }
+//
+//        if (events & EVENT_UPDATE_SPEED) {
+//#if defined (CHARACTERIZE_POSITION) || defined (CHARACTERIZE_VELOCITY)
+//            CharacterizeStep();
+//#else
+//#ifdef VELOCITY
+//            //   PMSM_Update_Velocity();
+//#endif
+//#ifdef POSITION
+//            //PMSM_Update_Position();
+//#endif
+//#ifdef TORQUE
+////            if (isTracking()) {
+////                if (getDriveStatus() == BLOCK) {
+////                    initSVMCom();
+////                    setDriveStatus(SVM);
+////                }
+////                updateTorqueController(0.3);
+////            }
+//
+//
+//#endif
+//
+//#endif
+//            events &= ~EVENT_UPDATE_SPEED;
+//        }
+//
+//        if (events & EVENT_UART_DATA_READY) {
+//            events &= ~EVENT_UART_DATA_READY;
+//        }
+//
+//        if (events & EVENT_CAN_RX) {
+//            events &= ~EVENT_CAN_RX;
+//        }
+//
+//        if (events & EVENT_SPI_RX) {
+//            static uint8_t message[32];
+//            uint16_t size;
+//            uint8_t out[56];
+//            message[0] = 0xFF;
+//            message[1] = 0xFF;
+//            message[2] = 0xFF;
+//            message[3] = 0xFF;
+//            message[4] = 0xFF;
+//            message[5] = 0xFF;
+//            message[6] = 0xFF;
+//            message[7] = 0xFF;
+//
+//            CB_ReadByte(&spiBuffer, &message[0]);
+//            CB_ReadByte(&spiBuffer, &message[1]);
+//            CB_ReadByte(&spiBuffer, &message[2]);
+//            CB_ReadByte(&spiBuffer, &message[3]);
+//            CB_ReadByte(&spiBuffer, &message[4]);
+//            CB_ReadByte(&spiBuffer, &message[5]);
+//            CB_ReadByte(&spiBuffer, &message[6]);
+//            CB_ReadByte(&spiBuffer, &message[7]);
+//
+//            CB_Init(&spiBuffer, &spiBuf, 64);
+//            LED1 ^= LED1;
+//            size = sprintf((char *) out, "0x%X, 0x%X, 0x%X, 0x%X\r\n",
+//                    ((message[0] << 8) | message[1]), ((message[2] << 8) | message[3]),
+//                    ((message[4] << 8) | message[5]), ((message[6] << 8) | message[7]));
+//            DMA0_UART2_Transfer(size, out);
+//            events &= ~EVENT_SPI_RX;
+//        }
+//
+//        if (events & EVENT_REPORT_FAULT) {
+//            events &= ~EVENT_REPORT_FAULT;
+//        }
+//
+//        if (events & EVENT_ADC_DATA) {
+//            size = sprintf((char *) out, "%i, %i, %u\r\n", ADCBuff.Adc1Data[0], ADCBuff.Adc1Data[1], getEncDC() << 16);
+//            DMA0_UART2_Transfer(size, out);
+//            events &= ~EVENT_ADC_DATA;
+//        }
     }
 }
+#endif
 
 void EventChecker(void) {
 #if defined (CHARACTERIZE_POSITION) || defined (CHARACTERIZE_VELOCITY)
@@ -196,40 +198,40 @@ void EventChecker(void) {
     } else {
         faultPrescalar++;
     }
-//    static uint16_t size;
-//    static uint8_t out[56];
-//    size = sprintf((char *) out, "%u\n", getEncDC() << 16);
-//    DMA0_UART2_Transfer(size, out);
-
-    if (uartBuffer.dataSize) {
-        events |= EVENT_UART_DATA_READY;
-    }
-
-    if (canBuffer.dataSize) {
-        events |= EVENT_CAN_RX;
-    }
-
-    if (spiBuffer.dataSize > 6) {
-        //The first bit of SPI is nonsense from the DRV due to it starting up
-        //that needs to be handled in the event handler which will process this
-        //event.
-      //  events |= EVENT_SPI_RX;
-    }
-
-#endif
-    if (ADCBuff.newData) {
-        ADCBuff.newData = 0;
-       // events |= EVENT_ADC_DATA;
-    }
-#ifdef SINE
-
-#endif
-    if (commutationPrescalar > 3) {
-        events |= EVENT_UPDATE_SPEED;
-        commutationPrescalar = 0;
-    } else {
-        commutationPrescalar++;
-    }
+//    //    static uint16_t size;
+//    //    static uint8_t out[56];
+//    //    size = sprintf((char *) out, "%u\n", getEncDC() << 16);
+//    //    DMA0_UART2_Transfer(size, out);
+//
+//    if (uartBuffer.dataSize) {
+//        events |= EVENT_UART_DATA_READY;
+//    }
+//
+//    if (canBuffer.dataSize) {
+//        events |= EVENT_CAN_RX;
+//    }
+//
+//    if (spiBuffer.dataSize > 6) {
+//        //The first bit of SPI is nonsense from the DRV due to it starting up
+//        //that needs to be handled in the event handler which will process this
+//        //event.
+//        //  events |= EVENT_SPI_RX;
+//    }
+//
+//#endif
+//    if (ADCBuff.newData) {
+//        ADCBuff.newData = 0;
+//        // events |= EVENT_ADC_DATA;
+//    }
+//#ifdef SINE
+//
+//#endif
+//    if (commutationPrescalar > 1) {
+//        events |= EVENT_UPDATE_SPEED;
+//        commutationPrescalar = 0;
+//    } else {
+//        commutationPrescalar++;
+//    }
 }
 #endif
 

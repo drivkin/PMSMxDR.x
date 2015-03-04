@@ -5,5 +5,6 @@ PMSMBoard.h  \
 DMA_Transfer.h  \
 Uart2.h  \
 DRV8301.h  \
-estimator.h  \
+EstimatorFixedPoint.h  \
+ SVM_Torque_Control.h  \
 SPIdsPIC.h 
